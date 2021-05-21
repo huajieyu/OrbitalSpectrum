@@ -77,9 +77,9 @@ void readprocess_em(){
 
   //open a txt file and 
   for(int iorb=0; iorb<orbital.size();iorb++){
-     if(iorb>0) break; 
+     //if(iorb>0) break; 
      for(int iw=0; iw<COL[iorb].size(); iw++){
-	  if(iw>0) break;
+	  //if(iw>0) break;
 	  //if(isyst > 6) continue;
 	  std::cout<<"iorb = "<<iorb<<std::endl;
 	  std::string inputfilestring;
