@@ -7,6 +7,7 @@ void readprocess_em(){
 	orbital.push_back("1p32");
 	orbital.push_back("1s12");
 	orbital.push_back("1f72");
+	orbital.push_back("corr");
 
 	const static int ROW=orbital.size();
 
@@ -64,9 +65,9 @@ void readprocess_em(){
            COL[ir].push_back("1.5");
            COL[ir].push_back("2.0");
       }
-	//else if(ir==7){
-        //   COL[ir].push_back("corr");
-        //}
+      else if(ir==7){
+           COL[ir].push_back("corr");
+      }
 
    }
 
@@ -84,7 +85,7 @@ void readprocess_em(){
 	  std::cout<<"iorb = "<<iorb<<std::endl;
 	  std::string inputfilestring;
 	  inputfilestring = "/dune/data/users/jiangl/sf_Ti48_DHB_"+orbital[iorb]+"_"+COL[iorb][iw]+".txt";
-
+	  if(iorb==7) inputfilestring = "/dune/data/users/jiangl/sf_Ti48_corr.txt"; 
 	  //std::cout<<inputfilestring<<std::endl;
 
 	  //open the while and readin line by line
@@ -142,11 +143,11 @@ void readprocess_em(){
 			//std::cout<<std::stold(tmp_spec_num1)<<std::endl;
 				
 			//std::cout<<std::stod(tmp_spec_num1)/(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum])<<std::endl;
-	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num1)/(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
-	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num2)/(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
-	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num3)/(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
-	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num4)/(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
-	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num5)/(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
+	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num1)*(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
+	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num2)*(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
+	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num3)*(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
+	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num4)*(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
+	                spec_Em_amp[binnum].push_back(std::stold(tmp_spec_num5)*(4*TMath::Pi()*temp_Pm[binnum]*temp_Pm[binnum]));
 			
 	                /*test_Em.push_back(std::stod(tmp_spec_num1));
 	                test_Em.push_back(std::stod(tmp_spec_num2));
@@ -159,10 +160,16 @@ void readprocess_em(){
 		  }//end of else 
 		index++;
 	  }//loop over all the lines in this file
+
+	  //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	  std::cout<<"Looped over all the lines in a certain file"<<std::endl;
+	  //200 graphs with spectrum as a function of Em with different Pm
 	  TGraph *gr_Em_spectrum[200];
 	  TGraph *gr_Pm_spectrum; //for whole range - integral over all the Em
-						
+	
+	  //get the spectrun within pmlow and pmhigh as a function of Em
+
+					
 	  for(int i=0; i<200; i++){
 		double spec_Em_x[4000];
 		double spec_Em_y[4000];
@@ -175,12 +182,46 @@ void readprocess_em(){
 		std::string tempname="gr_Em_spectrum_"+to_string(i);
 		gr_Em_spectrum[i]->SetName(tempname.c_str());
 	  }
-	
+	  //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<,
  	  std::string outfilename="demo_test_"+orbital[iorb]+"_"+COL[iorb][iw]+".root";
 	  TFile ff(outfilename.c_str(), "recreate"); 
+	
+ 	  double Plow=0; double Phigh=0;
+	  std::string kinname="";
+	  for(int kin=0; kin<5; kin++){
+	  int choosekin=kin;
+	  if(choosekin==0) {Plow=0; Phigh=1000; kinname="Kin0";}
+	  if(choosekin==1) {Plow=0; Phigh=140 ; kinname="Kin1";}
+	  if(choosekin==2) {Plow=130; Phigh=260; kinname="Kin2";}
+	  if(choosekin==3) {Plow=100; Phigh=260; kinname="Kin3";}
+	  if(choosekin==4) {Plow=170; Phigh=300; kinname="Kin4";}
+	  if(choosekin==5) {Plow=200; Phigh=350; kinname="Kin5";}	//check with Argon's distribution
+
+	  double rgdEm[4000];
+	  double rgdSpec[4000];
+	  for(int it=0; it<4000; it++){
+		rgdEm[it]=spec_Em_bin[0][it];
+		rgdSpec[it]=0.0;
+	  	for(int k=0; k<200; k++){
+			if(temp_Pm[k]<Plow || temp_Pm[k]>Phigh) continue;
+			//only process the spectrums within plow and phigh
+			rgdSpec[it] +=spec_Em_amp[k][it]*5.0;
+	  	}
+		
+	  }
+
+	  TGraph *gr_rgd_Em=new TGraph(4000,rgdEm, rgdSpec);
+	  //std::string rgdname="gr_"+orbital[iorb]+"_"+COL[iorb][iw]+"_Kin"+to_string(choosekin);
+	  std::string rgdname="gr_"+orbital[iorb]+"_"+to_string(iw)+"_Kin"+to_string(choosekin);
+	  std::cout<<"graph name is "<<rgdname<<std::endl;
+	  gr_rgd_Em->SetName(rgdname.c_str());
+	  gr_rgd_Em->Write();
+	  }
+	  //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	  double spec_Pm_amp[200];
 	  for(int ik=0; ik<200; ik++){
 			gr_Em_spectrum[ik]->Write();	  
+			//integral over all the Em , then get the total probability at a certain pm
 			spec_Pm_amp[ik]=gr_Em_spectrum[ik]->Integral();
 			
 	  }
